@@ -1,5 +1,16 @@
 #!/usr/bin/env ruby
 require 'fileutils'
+require 'optparse'
+
+$opts = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: raw_import [options]"
+
+  opts.on("--cam_prefix PREFIX", "Set camera prefix") do |prefix|
+    $opts[:cam_prefix] = prefix
+  end
+end.parse!
+
 
 CARD_PATH="G:/"
 SOURCE_DIR="DCIM/100CANON"
@@ -98,7 +109,8 @@ else
 end
 puts "Importing files created after #{start.to_s}" if start
 
-prefix = CardInfo.cam_prefix
+prefix = $opts[:cam_prefix]
+prefix ||= CardInfo.cam_prefix
 puts "Using camera prefix: #{prefix}" if prefix
 
 puts
@@ -118,8 +130,12 @@ batches.each do |batch|
 		src_file = File.join(SOURCE_PATH, file.name)
 		dest_file = File.join(dest_dir, name)
 		
-		puts "#{name} #{file.time}"
-		FileUtils.cp(src_file, dest_file, preserve: true)
+		if File.exists?(dest_file)
+			puts "#{name} already exists - skipping"
+		else
+			puts "#{name} #{file.time}"
+			FileUtils.cp(src_file, dest_file, preserve: true)
+		end
 	end
 	puts
 end

@@ -5,6 +5,7 @@ VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8FC8F3AB-792A-4AD7-B48C-BB975465D219}"
 	ProjectSection(SolutionItems) = preProject
+		find_unproc.rb = find_unproc.rb
 		raw_import.rb = raw_import.rb
 	EndProjectSection
 EndProject
