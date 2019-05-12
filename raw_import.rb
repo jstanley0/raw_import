@@ -13,7 +13,7 @@ end.parse!
 
 
 CARD_PATH="G:/"
-SOURCE_DIR="DCIM/100CANON"
+SOURCE_DIR="DCIM/**/*"
 SOURCE_PATH=File.join(CARD_PATH, SOURCE_DIR)
 
 CAM_PREFIX="cam_prefix"
@@ -28,11 +28,12 @@ IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG)
 NIGHT_BATCH_GAP=60*60*3
 
 class FileInfo
-	attr_accessor :name, :time
+	attr_reader :path, :name, :time
 
-	def initialize(path, name)
-		@name = name
-		@time = File.birthtime(File.join(path, name))
+	def initialize(path)
+		@path = path
+		@name = File.basename(path)
+		@time = File.birthtime(path)
 	end
 
 	def date
@@ -79,8 +80,8 @@ def split_batch?(batch, file)
 end
 
 def find_source_batches(since)
-	filenames = Dir.entries(SOURCE_PATH).select { |ent| IMPORT_EXTS.include?(File.extname(ent)) }
-	files = filenames.map { |fname| FileInfo.new(SOURCE_PATH, fname) }
+	filenames = Dir.glob(SOURCE_PATH).select { |ent| IMPORT_EXTS.include?(File.extname(ent)) }
+	files = filenames.map { |fname| FileInfo.new(fname) }
 	files.select! { |file| file.time > since } if since
 	return nil if files.empty?
 	files.sort_by!(&:time)
@@ -127,7 +128,7 @@ batches.each do |batch|
 	FileUtils.mkdir_p(dest_dir)
 	batch.each do |file|
 		name = CardInfo.transform_name(file.name)
-		src_file = File.join(SOURCE_PATH, file.name)
+		src_file = file.path
 		dest_file = File.join(dest_dir, name)
 		
 		if File.exists?(dest_file)
