@@ -22,7 +22,7 @@ MAX_PREFIX=32
 LAST_IMPORT="last_import"
 
 IMPORT_PATH="D:/RAW"
-IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG .DNGs)
+IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG .DNG)
 
 # avoid splitting photo sessions that cross midnight if a photo on the new day is taken within 3 hours of the previous one
 NIGHT_BATCH_GAP=60*60*3
