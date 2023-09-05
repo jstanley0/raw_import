@@ -1,20 +1,19 @@
 #!/usr/bin/env ruby
 require 'fileutils'
 require 'optparse'
+require 'win32ole'
 
 $opts = {}
 OptionParser.new do |opts|
   opts.banner = "Usage: raw_import [options]"
 
   opts.on("--cam_prefix PREFIX", "Set camera prefix") do |prefix|
-    $opts[:cam_prefix] = prefix
+	$opts[:cam_prefix] = prefix
   end
 end.parse!
 
-
-CARD_PATH="F:/"
-SOURCE_DIR="DCIM/**/*"
-SOURCE_PATH=File.join(CARD_PATH, SOURCE_DIR)
+CARD_LABEL="EOS_DIGITAL"
+SOURCE_GLOB="DCIM/**/*"
 
 CAM_PREFIX="cam_prefix"
 MAX_PREFIX=32
@@ -42,6 +41,30 @@ class FileInfo
 end
 
 class CardInfo
+	def self.card_path
+		@card_path ||= begin
+			file_system = WIN32OLE.new("Scripting.FileSystemObject")
+			drive = nil # dumb thing doesn't support `detect` 
+			file_system.Drives.each do |d|
+				next unless d.IsReady
+				if d.VolumeName == CARD_LABEL
+					drive = d
+					break
+				end
+			end
+			unless drive
+				puts "Memory card not found"
+				exit 1
+			end
+			puts "Found memory card #{drive.VolumeName} at path #{drive.Path}"
+			drive.path
+		end
+	end
+
+	def self.source_glob
+		File.join(card_path, SOURCE_GLOB)
+	end
+
 	def self.cam_prefix
 		prefix_frd.length > 0 ? prefix_frd : nil
 	end
@@ -51,18 +74,18 @@ class CardInfo
 	end
 
 	def self.last_import
-		Time.at(File.read(File.join(CARD_PATH, LAST_IMPORT)).to_i)
+		Time.at(File.read(File.join(card_path, LAST_IMPORT)).to_i)
 	rescue
 		nil
 	end
 
 	def self.last_import=(time)
-		File.write(File.join(CARD_PATH, LAST_IMPORT), time.to_i.to_s)
+		File.write(File.join(card_path, LAST_IMPORT), time.to_i.to_s)
 	end
 
 	def self.prefix_frd
 		@prefix ||= begin
-			File.read(File.join(CARD_PATH, CAM_PREFIX)).strip[0, MAX_PREFIX]
+			File.read(File.join(card_path, CAM_PREFIX)).strip[0, MAX_PREFIX]
 		rescue
 			''
 		end
@@ -80,7 +103,7 @@ def split_batch?(batch, file)
 end
 
 def find_source_batches(since)
-	filenames = Dir.glob(SOURCE_PATH).select { |ent| IMPORT_EXTS.include?(File.extname(ent)) }
+	filenames = Dir.glob(CardInfo.source_glob).select { |ent| IMPORT_EXTS.include?(File.extname(ent)) }
 	files = filenames.map { |fname| FileInfo.new(fname) }
 	files.select! { |file| file.time > since } if since
 	return nil if files.empty?
