@@ -12,7 +12,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-CARD_LABEL="EOS_DIGITAL"
+CARD_LABELS=%w[EOS_DIGITAL DJI]
 SOURCE_GLOB="DCIM/**/*"
 
 CAM_PREFIX="cam_prefix"
@@ -22,17 +22,23 @@ LAST_IMPORT="last_import"
 
 IMPORT_PATH="D:/RAW"
 IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG .DNG)
+CONDITIONAL_IMPORT_EXTS=%w(.JPG) # only import if another file with the same basename does not exist
 
 # avoid splitting photo sessions that cross midnight if a photo on the new day is taken within 3 hours of the previous one
 NIGHT_BATCH_GAP=60*60*3
 
 class FileInfo
-	attr_reader :path, :name, :time
+	attr_reader :path, :ext, :basename, :time
 
 	def initialize(path)
 		@path = path
-		@name = File.basename(path)
+		@ext = File.extname(path)
+		@basename = File.basename(path, ext)
 		@time = File.birthtime(path)
+	end
+
+	def name
+		basename + ext
 	end
 
 	def date
@@ -47,7 +53,7 @@ class CardInfo
 			drive = nil # dumb thing doesn't support `detect` 
 			file_system.Drives.each do |d|
 				next unless d.IsReady
-				if d.VolumeName == CARD_LABEL
+				if CARD_LABELS.include?(d.VolumeName)
 					drive = d
 					break
 				end
@@ -149,6 +155,8 @@ batches.each do |batch|
 	dest_dir = batch_path(batch)
 	puts dest_dir
 	FileUtils.mkdir_p(dest_dir)
+	batch.reject! { |file| CONDITIONAL_IMPORT_EXTS.include?(file.ext) &&
+	                       batch.any? { |other_file| other_file.basename == file.basename && other_file.ext != file.ext } }
 	batch.each do |file|
 		name = CardInfo.transform_name(file.name)
 		src_file = file.path
