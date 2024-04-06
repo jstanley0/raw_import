@@ -53,6 +53,10 @@ class CardInfo
 		if DARWIN
 			@card_path ||= begin
 				path = Dir.glob("/Volumes/**").detect { CARD_LABELS.include?(File.basename(_1)) }
+				unless path
+					puts "Memory card not found"
+					exit 1
+				end
 				puts "Found memory card at #{path}"
 				path
 			end
