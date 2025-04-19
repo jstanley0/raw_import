@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 require 'fileutils'
 require 'optparse'
-require 'win32ole'
+
+DARWIN=RUBY_PLATFORM.match?(/darwin/)
+require 'win32ole' unless DARWIN
 
 $opts = {}
 OptionParser.new do |opts|
@@ -20,7 +22,7 @@ MAX_PREFIX=32
 
 LAST_IMPORT="last_import"
 
-IMPORT_PATH="F:/RAW"
+IMPORT_PATH=DARWIN ? File.expand_path("~/raw") : "F:/RAW"
 IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG .DNG)
 CONDITIONAL_IMPORT_EXTS=%w(.JPG) # only import if another file with the same basename does not exist
 
@@ -49,22 +51,34 @@ end
 
 class CardInfo
 	def self.card_path
-		@card_path ||= begin
-			file_system = WIN32OLE.new("Scripting.FileSystemObject")
-			drive = nil # dumb thing doesn't support `detect` 
-			file_system.Drives.each do |d|
-				next unless d.IsReady
-				if CARD_LABELS.include?(d.VolumeName)
-					drive = d
-					break
+		if DARWIN
+			@card_path ||= begin
+				path = Dir.glob("/Volumes/**").detect { CARD_LABELS.include?(File.basename(_1)) }
+				unless path
+					puts "Memory card not found"
+					exit 1
 				end
+				puts "Found memory card at #{path}"
+				path
 			end
-			unless drive
-				puts "Memory card not found"
-				exit 1
+		else
+			@card_path ||= begin
+				file_system = WIN32OLE.new("Scripting.FileSystemObject")
+				drive = nil # dumb thing doesn't support `detect`
+				file_system.Drives.each do |d|
+					next unless d.IsReady
+					if CARD_LABELS.include?(d.VolumeName)
+						drive = d
+						break
+					end
+				end
+				unless drive
+					puts "Memory card not found"
+					exit 1
+				end
+				puts "Found memory card #{drive.VolumeName} at path #{drive.Path}"
+				drive.path
 			end
-			puts "Found memory card #{drive.VolumeName} at path #{drive.Path}"
-			drive.path
 		end
 	end
 
@@ -162,8 +176,8 @@ batches.each do |batch|
 		name = CardInfo.transform_name(file.name)
 		src_file = file.path
 		dest_file = File.join(dest_dir, name)
-		
-		if File.exists?(dest_file)
+
+		if File.exist?(dest_file)
 			puts "#{name} already exists - skipping"
 		else
 			puts "#{name} #{file.time}"
