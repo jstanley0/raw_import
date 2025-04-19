@@ -12,7 +12,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-CARD_LABELS=%w[EOS_DIGITAL DJI]
+CARD_LABELS=%w[EOS_DIGITAL CANON_DC DJI]
 SOURCE_GLOB="DCIM/**/*"
 
 CAM_PREFIX="cam_prefix"
@@ -20,7 +20,7 @@ MAX_PREFIX=32
 
 LAST_IMPORT="last_import"
 
-IMPORT_PATH="D:/RAW"
+IMPORT_PATH="F:/RAW"
 IMPORT_EXTS=%w(.CRW .CR2 .CR3 .MOV .MP4 .JPG .DNG)
 CONDITIONAL_IMPORT_EXTS=%w(.JPG) # only import if another file with the same basename does not exist
 
@@ -35,6 +35,7 @@ class FileInfo
 		@ext = File.extname(path)
 		@basename = File.basename(path, ext)
 		@time = File.birthtime(path)
+		@time = File.mtime(path) if @time < Time.new(2000, 1, 1)
 	end
 
 	def name
