@@ -166,6 +166,7 @@ unless batches
 	exit 1
 end
 
+preserve = true
 batches.each do |batch|
 	dest_dir = batch_path(batch)
 	puts dest_dir
@@ -181,7 +182,16 @@ batches.each do |batch|
 			puts "#{name} already exists - skipping"
 		else
 			puts "#{name} #{file.time}"
-			FileUtils.cp(src_file, dest_file, preserve: true)
+			begin
+				FileUtils.cp(src_file, dest_file, preserve:)
+			rescue Errno::EACCES
+				if preserve
+					preserve = false
+					retry unless File.exist?(dest_file)
+				else
+					raise
+				end
+			end
 		end
 	end
 	puts
